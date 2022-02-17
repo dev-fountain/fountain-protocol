@@ -6,7 +6,7 @@ import "./PriceOracle.sol";
 import "./ComptrollerInterface.sol";
 import "./ComptrollerStorage.sol";
 import "./Unitroller.sol";
-import "./Governance/Ftp.sol";
+import "./Governance/IFtp.sol";
 
 /**
  * @title Compound's Comptroller Contract
@@ -1236,7 +1236,7 @@ contract ComptrollerG7 is ComptrollerV5Storage, ComptrollerInterface, Comptrolle
      * @return The amount of COMP which was NOT transferred to the user
      */
     function grantCompInternal(address user, uint amount) internal returns (uint) {
-        Ftp comp = Ftp(getCompAddress());
+        IFtp comp = IFtp(getCompAddress());
         uint compRemaining = comp.balanceOf(address(this));
         if (amount > 0 && amount <= compRemaining) {
             comp.transfer(user, amount);
@@ -1292,6 +1292,6 @@ contract ComptrollerG7 is ComptrollerV5Storage, ComptrollerInterface, Comptrolle
      * @return The address of COMP
      */
     function getCompAddress() public view returns (address) {
-        return 0x08ed252BDA5AA73a5094DFa19Fc0B76C6d2291B0;
+        return 0xd1dF9CE4b6159441D18BD6887dbd7320a8D52a05;
     }
 }

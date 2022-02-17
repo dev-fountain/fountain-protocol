@@ -6,7 +6,7 @@ import "./PriceOracle.sol";
 import "./ComptrollerInterface.sol";
 import "./ComptrollerStorage.sol";
 import "./Unitroller.sol";
-import "./Governance/Ftp.sol";
+import "./Governance/IFtp.sol";
 import "./SafeMath.sol";
 /**
  * @title Compound's Comptroller Contract
@@ -97,16 +97,12 @@ contract Comptroller is ComptrollerV7Storage, ComptrollerInterface, ComptrollerE
     function initMining(uint256 _reductionPeriod) external{
         require(msg.sender == admin,"only admin can call this function");
         require(!isMiningInit,"only call once");
+        require(30 days <= _reductionPeriod && reductionPeriod <= 31 days,"_reductionPeriod out of range");
         isMiningInit = true;
         reductionPeriod = _reductionPeriod;
         startSpeedTime = getBlockTimestamp();
     }
 
-    function reInitMining(uint256 _reductionPeriod) external{
-        require(msg.sender == admin,"only admin can call this function");
-        reductionPeriod = _reductionPeriod;
-        startSpeedTime = getBlockTimestamp();
-    }
 
     /*** Assets You Are In ***/
 
@@ -387,7 +383,7 @@ contract Comptroller is ComptrollerV7Storage, ComptrollerInterface, ComptrollerE
         if (borrowCap != 0) {
             uint totalBorrows = CToken(cToken).totalBorrows();
             uint nextTotalBorrows = add_(totalBorrows, borrowAmount);
-            require(nextTotalBorrows < borrowCap, "market borrow cap reached");
+            require(nextTotalBorrows <= borrowCap, "market borrow cap reached");
         }
 
         (Error err, , uint shortfall) = getHypotheticalAccountLiquidityInternal(borrower, CToken(cToken), 0, borrowAmount);
@@ -1158,7 +1154,7 @@ contract Comptroller is ComptrollerV7Storage, ComptrollerInterface, ComptrollerE
         uint32 blockTimestamp;
         uint deltaTimes;
         if(exp >= maxExp){
-            uint endSpeedTime = startSpeedTime +  1440 days;  // 30 days per month
+            uint endSpeedTime = startSpeedTime +  reductionPeriod.mul(maxExp);  // 30 days per month
             blockTimestamp = safe32(endSpeedTime, "timestamp exceeds 32 bits");
             deltaTimes = sub_(uint(blockTimestamp), uint(supplyState.timestamp));
         }else{
@@ -1196,7 +1192,7 @@ contract Comptroller is ComptrollerV7Storage, ComptrollerInterface, ComptrollerE
         uint32 blockTimestamp;
         uint deltaTimes;
         if(exp >= maxExp){
-            uint endSpeedTime = startSpeedTime + 1440 days;  // 30 days per month
+            uint endSpeedTime = startSpeedTime + reductionPeriod.mul(maxExp);
             blockTimestamp = safe32(endSpeedTime, "timestamp exceeds 32 bits");
             deltaTimes = sub_(uint(blockTimestamp), uint(borrowState.timestamp));
         }else{
@@ -1384,7 +1380,7 @@ contract Comptroller is ComptrollerV7Storage, ComptrollerInterface, ComptrollerE
      * @return The amount of COMP which was NOT transferred to the user
      */
     function grantCompInternal(address user, uint amount) internal returns (uint) {
-        Ftp ftp = Ftp(getCompAddress());
+        IFtp ftp = IFtp(getCompAddress());
         uint compRemaining = ftp.balanceOf(address(this));
         if (amount > 0 && amount <= compRemaining) {
             ftp.transfer(user, amount);
@@ -1460,7 +1456,7 @@ contract Comptroller is ComptrollerV7Storage, ComptrollerInterface, ComptrollerE
      * @return The address of COMP
      */
     function getCompAddress() public view returns (address) {
-        return 0x08ed252BDA5AA73a5094DFa19Fc0B76C6d2291B0;
+        return 0xd1dF9CE4b6159441D18BD6887dbd7320a8D52a05;
     }
 
 }

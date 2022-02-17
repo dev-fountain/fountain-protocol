@@ -24,7 +24,8 @@ contract Timelock {
 
     constructor(address admin_, uint delay_) public {
         require(delay_ >= MINIMUM_DELAY, "Timelock::constructor: Delay must exceed minimum delay.");
-        require(delay_ <= MAXIMUM_DELAY, "Timelock::setDelay: Delay must not exceed maximum delay.");
+        require(delay_ <= MAXIMUM_DELAY, "Timelock::constructor: Delay must not exceed maximum delay.");
+        require(admin_ != address(0),"Timelock::constructor:admin can not be zero");
         deadline = block.timestamp + 180 days;
         admin = admin_;
         delay = delay_;

@@ -5,8 +5,8 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable{
-    using SafeERC20 for IERC20;
+
+contract LPFarmStorage {
     // Info of each user.
     struct UserInfo {
         uint amount;     // How many LP tokens the user has provided.
@@ -23,7 +23,7 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
     // reward tokens created per second.
     uint public rewardsPerSecond;
     // Bonus muliplier for early reward makers.
-    uint public BONUS_MULTIPLIER;
+    uint public bounsMultiplier;
     // Info of each pool.
     PoolInfo[] public poolInfo;
     // Info of each user that stakes LP tokens.
@@ -36,6 +36,12 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
     mapping (address => bool) tokenAddedList;
     mapping (address => uint) public lpTokenTotal;
     mapping (address => uint) public rewardBalances;
+}
+
+contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, LPFarmStorage{
+    using SafeERC20 for IERC20;
+
+    uint public constant PRECISION = 1e12;
     event Deposit(address indexed payer, address indexed user, uint indexed pid, uint amount);
     event Withdraw(address indexed user, uint indexed pid, uint amount);
     event ClaimRewards(address indexed user,uint256 indexed pid,uint256 rewardAmount);
@@ -51,12 +57,13 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
         startTime = _startTime;
         endTime = _endTime;
         totalAllocPoint = 0;
-        BONUS_MULTIPLIER = 1;
+        bounsMultiplier = 1;
         __Ownable_init();
         __ReentrancyGuard_init();
     }
     function updateMultiplier(uint multiplierNumber) public onlyOwner {
-        BONUS_MULTIPLIER = multiplierNumber;
+        _updateAllPools();
+        bounsMultiplier = multiplierNumber;
     }
     function add(uint _allocPoint, address _lpToken, bool _withUpdate) public onlyOwner {
         require(!tokenAddedList[_lpToken], "token exists");
@@ -64,7 +71,6 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
             _updateAllPools();
         }
         uint lastRewardTime = getBlockTimestamp() > startTime ? getBlockTimestamp() : startTime;
-        totalAllocPoint = totalAllocPoint + _allocPoint;
         poolInfo.push(PoolInfo({
             lpToken: _lpToken,
             allocPoint: _allocPoint,
@@ -94,11 +100,11 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
     }
     function getMultiplier(uint _from, uint _to) internal view returns (uint) {
         if (_to <= endTime) {
-            return (_to - _from) * BONUS_MULTIPLIER;
+            return (_to - _from) * bounsMultiplier;
         } else if (_from >= endTime) {
             return 0;
         } else {
-            return (endTime - _from) * BONUS_MULTIPLIER;
+            return (endTime - _from) * bounsMultiplier;
         }
     }
     function pendingRewards(uint _pid, address _user) external view returns (uint) {
@@ -109,9 +115,9 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
         if (getBlockTimestamp() > pool.lastRewardTime && lpSupply != 0) {
             uint multiplier = getMultiplier(pool.lastRewardTime, getBlockTimestamp());
             uint rewardsReward = multiplier * rewardsPerSecond * pool.allocPoint / totalAllocPoint;
-            accRewardsPerShare = accRewardsPerShare + rewardsReward * 1e12 / lpSupply;
+            accRewardsPerShare = accRewardsPerShare + rewardsReward * PRECISION / lpSupply;
         }
-        return user.amount * accRewardsPerShare / 1e12 - user.rewardDebt;
+        return user.amount * accRewardsPerShare / PRECISION - user.rewardDebt;
     }
     function updateAllPools() external {
         _updateAllPools();
@@ -134,7 +140,7 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
         }
         uint multiplier = getMultiplier(pool.lastRewardTime, getBlockTimestamp());
         uint rewardAmount = multiplier * rewardsPerSecond * pool.allocPoint / totalAllocPoint;
-        pool.accRewardsPerShare = pool.accRewardsPerShare + rewardAmount * 1e12 / lpSupply;
+        pool.accRewardsPerShare = pool.accRewardsPerShare + rewardAmount * PRECISION / lpSupply;
         pool.lastRewardTime = getBlockTimestamp();
     }
     function deposit(uint _pid, uint _amount) external {
@@ -142,7 +148,7 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
         if (user.amount > 0) {
-            uint pending = user.amount * pool.accRewardsPerShare / 1e12 - user.rewardDebt;
+            uint pending = user.amount * pool.accRewardsPerShare / PRECISION - user.rewardDebt;
             if(pending > 0) {
                 safeRewardsTransfer(msg.sender, pending);
             }
@@ -151,7 +157,7 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
             IERC20(pool.lpToken).safeTransferFrom(msg.sender, address(this), _amount);
             user.amount += _amount;
         }
-        user.rewardDebt = user.amount * pool.accRewardsPerShare / 1e12;
+        user.rewardDebt = user.amount * pool.accRewardsPerShare / PRECISION;
         lpTokenTotal[pool.lpToken] += _amount;
         emit Deposit(msg.sender, msg.sender, _pid, _amount);
     }
@@ -162,11 +168,11 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
             UserInfo storage user = userInfo[i][_account];
             updatePool(i);
             if (user.amount > 0) {
-                uint256 reward = user.amount * pool.accRewardsPerShare / 1e12 - user.rewardDebt;
+                uint256 reward = user.amount * pool.accRewardsPerShare / PRECISION - user.rewardDebt;
                 pending += reward;
                 emit ClaimRewards(_account, i, reward);
             }
-            user.rewardDebt = user.amount * pool.accRewardsPerShare / 1e12;
+            user.rewardDebt = user.amount * pool.accRewardsPerShare / PRECISION;
         }
         uint256 balance = IERC20(rewardToken).balanceOf(address(this));
         if(pending > 0 && pending <= balance) {
@@ -178,7 +184,7 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
         UserInfo storage user = userInfo[_pid][_account];
         updatePool(_pid);
         if (user.amount > 0) {
-            uint pending = user.amount * pool.accRewardsPerShare / 1e12 - user.rewardDebt;
+            uint pending = user.amount * pool.accRewardsPerShare / PRECISION - user.rewardDebt;
             if(pending > 0) {
                 safeRewardsTransfer(_account, pending);
             }
@@ -187,7 +193,7 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
             IERC20(pool.lpToken).safeTransferFrom(msg.sender, address(this), _amount);
             user.amount += _amount;
         }
-        user.rewardDebt = user.amount * pool.accRewardsPerShare / 1e12;
+        user.rewardDebt = user.amount * pool.accRewardsPerShare / PRECISION;
         lpTokenTotal[pool.lpToken] += _amount;
         emit Deposit(msg.sender, _account, _pid, _amount);
     }
@@ -196,25 +202,31 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "lpToken insufficient");
         updatePool(_pid);
-        uint pending = user.amount * pool.accRewardsPerShare / 1e12 - user.rewardDebt;
+        uint pending = user.amount * pool.accRewardsPerShare / PRECISION - user.rewardDebt;
         if(_amount > 0) {
             user.amount -= _amount;
             lpTokenTotal[pool.lpToken] -= _amount;
             IERC20(pool.lpToken).safeTransfer(msg.sender, _amount);
         }
-        user.rewardDebt = user.amount * pool.accRewardsPerShare / 1e12;
+        user.rewardDebt = user.amount * pool.accRewardsPerShare / PRECISION;
         if(pending > 0) {
             safeRewardsTransfer(msg.sender, pending);
         }
         emit Withdraw(msg.sender, _pid, _amount);
     }
     function safeRewardsTransfer(address to, uint amount) internal {
-        IERC20(rewardToken).safeTransfer(to, amount);
+        uint rewardTokenBalance = IERC20(rewardToken).balanceOf(address(this));
+        if(amount > rewardTokenBalance) {
+            IERC20(rewardToken).safeTransfer(to, rewardTokenBalance);
+        } else {
+            IERC20(rewardToken).safeTransfer(to, amount);
+        }
     }
     function getPoolSize() external view returns(uint) {
         return poolInfo.length;
     }
     function setRewardsPerSecond(uint _rewardsPerSecond) external onlyOwner {
+        _updateAllPools();
         uint oldrewardsPerSecond = rewardsPerSecond;
         rewardsPerSecond = _rewardsPerSecond;
         emit NewRewardsPerSecond(rewardsPerSecond, oldrewardsPerSecond);

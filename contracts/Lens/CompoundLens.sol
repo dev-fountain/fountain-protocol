@@ -5,7 +5,7 @@ import "../CErc20.sol";
 import "../CToken.sol";
 import "../PriceOracle.sol";
 import "../EIP20Interface.sol";
-import "../Governance/Ftp.sol";
+import "../Governance/IFtp.sol";
 
 interface ComptrollerLensInterface {
     function markets(address) external view returns (bool, uint);
@@ -239,7 +239,7 @@ contract CompoundLens {
 
     function getAccountLimits(ComptrollerLensInterface comptroller, address account) public returns (AccountLimits memory) {
         (uint errorCode, uint liquidity, uint shortfall) = comptroller.getAccountLiquidity(account);
-        require(errorCode == 0);
+        require(errorCode == 0,"getAccountLimits error");
 
         return AccountLimits({
             markets: comptroller.getAssetsIn(account),
@@ -261,7 +261,7 @@ contract CompoundLens {
         uint balance;
     }
 
-    function getCompBalanceMetadata(Ftp comp, address account) external view returns (CompBalanceMetadata memory) {
+    function getCompBalanceMetadata(IFtp comp, address account) external view returns (CompBalanceMetadata memory) {
         return CompBalanceMetadata({
             balance: comp.balanceOf(account)
         });
@@ -272,7 +272,7 @@ contract CompoundLens {
         uint allocated;
     }
 
-    function getCompBalanceMetadataExt(Ftp comp, ComptrollerLensInterface comptroller, address account) external returns (CompBalanceMetadataExt memory) {
+    function getCompBalanceMetadataExt(IFtp comp, ComptrollerLensInterface comptroller, address account) external returns (CompBalanceMetadataExt memory) {
         uint balance = comp.balanceOf(account);
         comptroller.claimComp(account);
         uint newBalance = comp.balanceOf(account);
@@ -286,7 +286,7 @@ contract CompoundLens {
         });
     }
 
-    function estimateFTP(Ftp comp,ComptrollerLensInterface comptroller,IFarm farm,IStake stake, address account) external returns(FTPRewards memory) {
+    function estimateFTP(IFtp comp,ComptrollerLensInterface comptroller,IFarm farm,IStake stake, address account) external returns(FTPRewards memory) {
         uint balance = comp.balanceOf(account);
         comptroller.claimComp(account);
         uint loanBalance = comp.balanceOf(account);

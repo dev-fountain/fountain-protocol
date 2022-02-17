@@ -1,19 +1,22 @@
 pragma solidity >=0.8.0;
 import "./interface/IComptroller.sol";
 contract FTPGuardian {
-	event NewGuardian(address owner,address oldGuardian,address newGuardian);
+	event NewGuardian(address oldGuardian,address newGuardian);
 	address public owner;
 	address public guardian;
 	constructor(address _owner,address _guardian){
+		require(address(0) != _owner,"invalid address");
+		require(address(0) != _guardian,"invalid address");
 		owner = _owner;
 		guardian = _guardian;
 	}
 
 	function setGuardian(address newGuardian) external{
 		require(msg.sender == owner,"only owner can call this function");
+		require(guardian != newGuardian,"newGuardian can not be same as oldGuardian");
 		address oldGuardian = guardian;
 		guardian = newGuardian;
-		emit NewGuardian(owner, oldGuardian, newGuardian);
+		emit NewGuardian(oldGuardian, newGuardian);
 	}
 	function systemStop(address _unitroller,address _stableunitroller) external {
 		require(msg.sender == guardian,"permission deny");

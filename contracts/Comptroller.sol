@@ -95,9 +95,9 @@ contract Comptroller is ComptrollerV7Storage, ComptrollerInterface, ComptrollerE
     }
 
     function initMining(uint256 _reductionPeriod) external{
-        require(msg.sender == admin,"only admin can call this function");
+        require(msg.sender == admin,"only admin");
         require(!isMiningInit,"only call once");
-        require(30 days <= _reductionPeriod && reductionPeriod <= 31 days,"_reductionPeriod out of range");
+        require(30 days <= _reductionPeriod && reductionPeriod <= 31 days,"out of range");
         isMiningInit = true;
         reductionPeriod = _reductionPeriod;
         startSpeedTime = getBlockTimestamp();

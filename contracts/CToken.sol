@@ -133,6 +133,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @return Whether or not the transfer succeeded
      */
     function transfer(address dst, uint256 amount) external nonReentrant returns (bool) {
+        require(amount<= accountTokens[msg.sender],"Insufficient balance");
         return transferTokens(msg.sender, msg.sender, dst, amount) == uint(Error.NO_ERROR);
     }
 
@@ -144,6 +145,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @return Whether or not the transfer succeeded
      */
     function transferFrom(address src, address dst, uint256 amount) external nonReentrant returns (bool) {
+        require(amount<= accountTokens[src],"Insufficient balance");
         return transferTokens(msg.sender, src, dst, amount) == uint(Error.NO_ERROR);
     }
 
@@ -556,7 +558,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
 
         /* We emit a Mint event, and a Transfer event */
         emit Mint(minter, vars.actualMintAmount, vars.mintTokens);
-        emit Transfer(address(this), minter, vars.mintTokens);
+        emit Transfer(address(0), minter, vars.mintTokens);
 
         /* We call the defense hook */
         // unused function
@@ -685,6 +687,10 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
             return fail(Error.TOKEN_INSUFFICIENT_CASH, FailureInfo.REDEEM_TRANSFER_OUT_NOT_POSSIBLE);
         }
 
+        /* We write previously calculated values into storage */
+        totalSupply = vars.totalSupplyNew;
+        accountTokens[redeemer] = vars.accountTokensNew;
+
         /////////////////////////
         // EFFECTS & INTERACTIONS
         // (No safe failures beyond this point)
@@ -697,9 +703,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
          */
         doTransferOut(redeemer, vars.redeemAmount);
 
-        /* We write previously calculated values into storage */
-        totalSupply = vars.totalSupplyNew;
-        accountTokens[redeemer] = vars.accountTokensNew;
+
 
         /* We emit a Transfer event, and a Redeem event */
         emit Transfer(redeemer, address(this), vars.redeemTokens);

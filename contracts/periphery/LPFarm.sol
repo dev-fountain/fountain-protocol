@@ -35,7 +35,6 @@ contract LPFarmStorage {
     uint public endTime;
     mapping (address => bool) tokenAddedList;
     mapping (address => uint) public lpTokenTotal;
-    mapping (address => uint) public rewardBalances;
 }
 
 contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, LPFarmStorage{
@@ -65,11 +64,9 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
         _updateAllPools();
         bounsMultiplier = multiplierNumber;
     }
-    function add(uint _allocPoint, address _lpToken, bool _withUpdate) public onlyOwner {
+    function add(uint _allocPoint, address _lpToken) public onlyOwner {
         require(!tokenAddedList[_lpToken], "token exists");
-        if (_withUpdate) {
-            _updateAllPools();
-        }
+        _updateAllPools();
         uint lastRewardTime = getBlockTimestamp() > startTime ? getBlockTimestamp() : startTime;
         poolInfo.push(PoolInfo({
             lpToken: _lpToken,
@@ -80,10 +77,8 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
         tokenAddedList[_lpToken] = true;
         updateStakingPool();
     }
-    function set(uint _pid, uint _allocPoint, bool _withUpdate) public onlyOwner {
-        if (_withUpdate) {
-            _updateAllPools();
-        }
+    function set(uint _pid, uint _allocPoint) public onlyOwner {
+        _updateAllPools();
         uint prevAllocPoint = poolInfo[_pid].allocPoint;
         poolInfo[_pid].allocPoint = _allocPoint;
         if (prevAllocPoint != _allocPoint) {

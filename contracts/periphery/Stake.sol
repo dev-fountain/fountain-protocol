@@ -27,10 +27,8 @@ contract Stake is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable,
     uint public constant BONUS_MULTIPLIER_MAX = 100;
     uint public constant REWARDS_PER_MAX = 100e18;
     event Stake(address staker, uint256 amount);
-    event Reward(address staker, uint256 amount);
     event Withdraw(address staker, uint256 amount, uint256 remainingAmount);
     event ClaimReward(address indexed user, uint256 tokenReward);
-    event DisrubuteRewards(address staker, uint256 interestAccumulated);
     event NewVoteToken(address newVoteToken, address oldVoteToken);
     event NewRewardsPerSecond(uint newRewardsPerSecond, uint oldRewardsPerSecond);
     event NewMultiplier(uint newMultiplier, uint oldMultiplier);
@@ -105,8 +103,8 @@ contract Stake is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable,
         }
         stakeBalance[msg.sender] -= amount;
         stakeTokenTotal -=amount;
-        TransferHelper.safeTransfer(stakeToken, msg.sender, amount);
         rewardDebt[msg.sender] = stakeBalance[msg.sender] * accRewardsPerShare / PRECISION;
+        TransferHelper.safeTransfer(stakeToken, msg.sender, amount);
         emit Withdraw(msg.sender, amount, stakeBalance[msg.sender]);
     }
     function estimateRewards(address account) external view returns (uint) {
@@ -132,8 +130,8 @@ contract Stake is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable,
         updatePool();
         if (stakeBalance[_account] > 0) {
             uint256 reward = _estimateRewards(_account);
-            safeRewardsTransfer(_account, reward);
             rewardDebt[_account] = stakeBalance[_account] * accRewardsPerShare / PRECISION;
+            safeRewardsTransfer(_account, reward);
             emit ClaimReward(_account, reward);
         }
     }

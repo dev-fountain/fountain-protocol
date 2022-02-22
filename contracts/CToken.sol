@@ -133,8 +133,8 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @return Whether or not the transfer succeeded
      */
     function transfer(address dst, uint256 amount) external nonReentrant returns (bool) {
-        require(amount<= accountTokens[msg.sender],"Insufficient balance");
-        return transferTokens(msg.sender, msg.sender, dst, amount) == uint(Error.NO_ERROR);
+        bool allowed =  transferTokens(msg.sender, msg.sender, dst, amount) == uint(Error.NO_ERROR);
+        require(allowed,"transfer not allowed");
     }
 
     /**
@@ -145,8 +145,8 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @return Whether or not the transfer succeeded
      */
     function transferFrom(address src, address dst, uint256 amount) external nonReentrant returns (bool) {
-        require(amount<= accountTokens[src],"Insufficient balance");
-        return transferTokens(msg.sender, src, dst, amount) == uint(Error.NO_ERROR);
+        bool allowed = transferTokens(msg.sender, src, dst, amount) == uint(Error.NO_ERROR);
+        require(allowed,"transferFrom not allowed");
     }
 
     /**
@@ -785,6 +785,11 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         // EFFECTS & INTERACTIONS
         // (No safe failures beyond this point)
 
+        /* We write the previously calculated values into storage */
+        accountBorrows[borrower].principal = vars.accountBorrowsNew;
+        accountBorrows[borrower].interestIndex = borrowIndex;
+        totalBorrows = vars.totalBorrowsNew;
+
         /*
          * We invoke doTransferOut for the borrower and the borrowAmount.
          *  Note: The cToken must handle variations between ERC-20 and ETH underlying.
@@ -793,10 +798,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
          */
         doTransferOut(borrower, borrowAmount);
 
-        /* We write the previously calculated values into storage */
-        accountBorrows[borrower].principal = vars.accountBorrowsNew;
-        accountBorrows[borrower].interestIndex = borrowIndex;
-        totalBorrows = vars.totalBorrowsNew;
+
 
         /* We emit a Borrow event */
         emit Borrow(borrower, borrowAmount, vars.accountBorrowsNew, vars.totalBorrowsNew);

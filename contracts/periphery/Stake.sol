@@ -78,7 +78,7 @@ contract Stake is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable,
         accRewardsPerShare = accRewardsPerShare + tokenReward * PRECISION / stakeTokenTotal;
         lastRewardBlockTimestamp = getBlockTimestamp();
     }
-    function stake(uint amount) external {
+    function stake(uint amount) external nonReentrant {
         require(amount > 0, "amount error");
         updatePool();
         TransferHelper.safeTransferFrom(stakeToken, msg.sender, address(this), amount);
@@ -93,7 +93,7 @@ contract Stake is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable,
         rewardDebt[msg.sender] = stakeBalance[msg.sender] * accRewardsPerShare / PRECISION;
         emit Stake(msg.sender, amount);
     }
-    function withdraw(uint amount) external {
+    function withdraw(uint amount) external nonReentrant {
         require(stakeBalance[msg.sender] >= amount, "insufficient balance");
         updatePool();
         if (stakeBalance[msg.sender] > 0) {

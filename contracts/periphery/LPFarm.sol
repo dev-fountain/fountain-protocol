@@ -138,7 +138,7 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
         pool.accRewardsPerShare = pool.accRewardsPerShare + rewardAmount * PRECISION / lpSupply;
         pool.lastRewardTime = getBlockTimestamp();
     }
-    function deposit(uint _pid, uint _amount) external {
+    function deposit(uint _pid, uint _amount) external nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
@@ -169,12 +169,11 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
             }
             user.rewardDebt = user.amount * pool.accRewardsPerShare / PRECISION;
         }
-        uint256 balance = IERC20(rewardToken).balanceOf(address(this));
-        if(pending > 0 && pending <= balance) {
+        if(pending > 0) {
             safeRewardsTransfer(_account, pending);
         }
     }
-    function depositBehalf(address _account, uint _pid, uint _amount) external {
+    function depositBehalf(address _account, uint _pid, uint _amount) external nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_account];
         updatePool(_pid);
@@ -192,18 +191,18 @@ contract LPFarm is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
         lpTokenTotal[pool.lpToken] += _amount;
         emit Deposit(msg.sender, _account, _pid, _amount);
     }
-    function withdraw(uint _pid, uint _amount) external {
+    function withdraw(uint _pid, uint _amount) external nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "lpToken insufficient");
         updatePool(_pid);
         uint pending = user.amount * pool.accRewardsPerShare / PRECISION - user.rewardDebt;
+        user.rewardDebt = user.amount * pool.accRewardsPerShare / PRECISION;
         if(_amount > 0) {
             user.amount -= _amount;
             lpTokenTotal[pool.lpToken] -= _amount;
             IERC20(pool.lpToken).safeTransfer(msg.sender, _amount);
         }
-        user.rewardDebt = user.amount * pool.accRewardsPerShare / PRECISION;
         if(pending > 0) {
             safeRewardsTransfer(msg.sender, pending);
         }

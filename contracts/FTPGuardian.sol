@@ -18,10 +18,9 @@ contract FTPGuardian {
 		guardian = newGuardian;
 		emit NewGuardian(oldGuardian, newGuardian);
 	}
-	function systemStop(address _unitroller,address _stableunitroller) external {
+	function systemStop(address _unitroller) external {
 		require(msg.sender == guardian,"permission deny");
 		IComptroller unitroller = IComptroller(_unitroller);
-		IComptroller stableUintroller = IComptroller(_stableunitroller);
 		
 		address[] memory ctokens1 = unitroller.getAllMarkets();
 		for(uint i = 0; i < ctokens1.length; i++){
@@ -32,28 +31,12 @@ contract FTPGuardian {
 				unitroller._setBorrowPaused(ctokens1[i],true);
 			}
 		}
-		address[] memory ctokens2 = stableUintroller.getAllMarkets();
-		for(uint i = 0; i < ctokens2.length; i++){
-			if(!stableUintroller.mintGuardianPaused(address(ctokens2[i]))){
-				stableUintroller._setMintPaused(ctokens2[i],true);
-			}
-			if(!stableUintroller.borrowGuardianPaused(address(ctokens2[i]))){
-				stableUintroller._setBorrowPaused(ctokens2[i],true);
-			}
-			
-		}
 		if(!unitroller.transferGuardianPaused()){
 			unitroller._setTransferPaused(true);
 		}
 		if(!unitroller.seizeGuardianPaused()){
 			unitroller._setSeizePaused(true);
 		}
-		if(!stableUintroller.transferGuardianPaused()){
-			stableUintroller._setTransferPaused(true);
-		}
-		if(!stableUintroller.seizeGuardianPaused()){
-			stableUintroller._setSeizePaused(true);
-		}	
 	}
 
 }

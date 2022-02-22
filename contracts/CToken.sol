@@ -135,6 +135,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
     function transfer(address dst, uint256 amount) external nonReentrant returns (bool) {
         bool allowed =  transferTokens(msg.sender, msg.sender, dst, amount) == uint(Error.NO_ERROR);
         require(allowed,"transfer not allowed");
+        return true;
     }
 
     /**
@@ -147,6 +148,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
     function transferFrom(address src, address dst, uint256 amount) external nonReentrant returns (bool) {
         bool allowed = transferTokens(msg.sender, src, dst, amount) == uint(Error.NO_ERROR);
         require(allowed,"transferFrom not allowed");
+        return true;
     }
 
     /**

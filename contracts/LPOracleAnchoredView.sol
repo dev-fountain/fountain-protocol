@@ -122,10 +122,8 @@ contract LPOracleAnchoredView {
         if (a == 0) {
             return 0;
         }
-
         int256 c = a * b;
         require(c / a == b, "SafeMath: multiplication overflow");
-
         return c;
     }
 

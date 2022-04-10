@@ -88,10 +88,10 @@ contract LPOracleAnchoredView {
 		}
 	}
 
-	function reserveProductAndTotalSupply(string memory symbol) internal view returns(uint totalSUpply,uint product) {
+	function reserveProductAndTotalSupply(string memory symbol) internal view returns(uint totalSupply,uint product) {
 		OracleTokenConfig memory config = CTokenConfigs[symbol];
 		IDexPair dexPair = IDexPair(config.underlying);
-		totalSUpply = dexPair.totalSupply();
+		totalSupply = dexPair.totalSupply();
 		(uint112 reserve0, uint112 reserve1,) = dexPair.getReserves();
 		uint decimal0 = OracleERC20(dexPair.token0()).decimals();
 		uint decimal1 = OracleERC20(dexPair.token1()).decimals();

@@ -34,8 +34,8 @@ contract LPOracleAnchoredView {
 	string constant public quote = "USD";
 	uint constant alignTo1e36 = 1e28;
 
-	mapping(string => OracleTokenConfig) CTokenConfigs;
-	mapping(address => string) cTokenSymbol;
+	mapping(string => OracleTokenConfig) public CTokenConfigs;
+	mapping(address => string) public cTokenSymbol;
 
 	struct OracleTokenConfig {
     	address cToken;

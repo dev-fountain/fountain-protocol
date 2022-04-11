@@ -103,17 +103,8 @@ contract LPOracleAnchoredView {
 
 	function priceProduct(string memory symbol) internal view returns(uint product){
 		OracleTokenConfig memory config = CTokenConfigs[symbol];
-		string memory symbol0;
-		string memory symbol1;
-		if(config.tokenA < config.tokenB){
-			symbol0 = config.symbolA;
-			symbol1 = config.symbolB;
-		}else{
-			symbol0 = config.symbolB;
-			symbol1 = config.symbolA;
-		}
-		uint price0 = oraclePrice(symbol0).rate;
-		uint price1 = oraclePrice(symbol1).rate;
+		uint price0 = oraclePrice(config.symbolA).rate;
+		uint price1 = oraclePrice(config.symbolB).rate;
 		product = price0.mul(price1);
 	}
 

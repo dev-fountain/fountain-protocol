@@ -32,6 +32,7 @@ contract LPOracleAnchoredView {
 	using SafeMath for uint;
 	IStdReference ref;
 	string constant public quote = "USD";
+	uint constant alignTo1e36 = 1e28;
 
 	mapping(string => OracleTokenConfig) CTokenConfigs;
 	mapping(address => string) cTokenSymbol;
@@ -64,7 +65,7 @@ contract LPOracleAnchoredView {
 		string memory symbol = cTokenSymbol[cToken];
 		OracleTokenConfig memory config = CTokenConfigs[symbol];
 		int256 rate = priceInternal(symbol);
-		return int256div(int256mul(1e28,rate),config.baseUnit);
+		return int256div(int256mul(alignTo1e36,rate),config.baseUnit);
     }
 
 	function priceInternal(string memory symbol) internal view returns (int256) {
@@ -122,8 +123,10 @@ contract LPOracleAnchoredView {
         if (a == 0) {
             return 0;
         }
+
         int256 c = a * b;
         require(c / a == b, "SafeMath: multiplication overflow");
+
         return c;
     }
 

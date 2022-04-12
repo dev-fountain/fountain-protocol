@@ -32,7 +32,7 @@ contract LPOracleAnchoredView {
 	using SafeMath for uint;
 	IStdReference ref;
 	string constant public quote = "USD";
-	uint constant alignTo1e36 = 1e28;
+	int256 constant alignTo1e36 = 1e28;
 
 	mapping(string => OracleTokenConfig) public CTokenConfigs;
 	mapping(address => string) public cTokenSymbol;

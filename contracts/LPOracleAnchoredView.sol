@@ -57,6 +57,7 @@ contract LPOracleAnchoredView {
 		}
 	}  
 
+
 	function price(string calldata symbol) external view returns (int256) {
 		return priceInternal(symbol);
     }
@@ -68,6 +69,7 @@ contract LPOracleAnchoredView {
 		return int256div(int256mul(alignTo1e36,rate),config.baseUnit);
     }
 
+
 	function priceInternal(string memory symbol) internal view returns (int256) {
 		require(CTokenConfigs[symbol].cToken != address(0),"config not found");
 		return getPrice(symbol);
@@ -77,6 +79,7 @@ contract LPOracleAnchoredView {
 		return ref.getReferenceData(symbol, quote);
 	}
 
+
 	function getPrice(string memory symbol) internal view returns(int256) {
 		if(keccak256(abi.encode("ROSE")) == keccak256(abi.encode(symbol))){
 			IStdReference.ReferenceData memory data = oraclePrice(symbol);
@@ -84,29 +87,47 @@ contract LPOracleAnchoredView {
 		}else{
 			(uint totalSupply, uint rProduct) = reserveProductAndTotalSupply(symbol);
 			uint pProduct = priceProduct(symbol);
-			uint p = sqrt(rProduct).mul(sqrt(pProduct)).mul(2).div(totalSupply);
+			uint sqrtK = fdiv(sqrt(rProduct),totalSupply); // in 2**112
+			uint p = sqrtK.mul(2).mul(sqrt(pProduct)).div(2 ** 112);
 			return int256(p.div(1e10));	
 		}
 	}
+
 
 	function reserveProductAndTotalSupply(string memory symbol) internal view returns(uint totalSupply,uint product) {
 		OracleTokenConfig memory config = CTokenConfigs[symbol];
 		IDexPair dexPair = IDexPair(config.underlying);
 		totalSupply = dexPair.totalSupply();
 		(uint112 reserve0, uint112 reserve1,) = dexPair.getReserves();
-		uint decimal0 = OracleERC20(dexPair.token0()).decimals();
-		uint decimal1 = OracleERC20(dexPair.token1()).decimals();
-		uint amount0 = uint(reserve0).mul(1e18).div(10 ** decimal0);
-		uint amount1 = uint(reserve1).mul(1e18).div(10 ** decimal1);
-		product = amount0.mul(amount1);
+		product = uint(reserve0).mul(uint(reserve1));
 	}
+
 
 	function priceProduct(string memory symbol) internal view returns(uint product){
 		OracleTokenConfig memory config = CTokenConfigs[symbol];
-		uint price0 = oraclePrice(config.symbolA).rate;
-		uint price1 = oraclePrice(config.symbolB).rate;
-		product = price0.mul(price1);
+		IDexPair dexPair = IDexPair(config.underlying);
+		uint decimal0 = OracleERC20(dexPair.token0()).decimals();
+		uint decimal1 = OracleERC20(dexPair.token1()).decimals();
+		string memory symbol0;
+		string memory symbol1;
+		if(config.tokenA < config.tokenB){
+			symbol0 = config.symbolA;
+			symbol1 = config.symbolB;
+		}else{
+			symbol0 = config.symbolB;
+			symbol1 = config.symbolA;
+		}
+		uint price0 = oraclePrice(symbol0).rate;
+		uint price1 = oraclePrice(symbol1).rate;
+		uint p1 = price0.mul(1e18).div(10 ** decimal0);
+		uint p2 = price1.mul(1e18).div(10 ** decimal1);
+		product = p1.mul(p2);
+
 	}
+
+   function fdiv(uint lhs, uint rhs) internal pure returns (uint) {
+    return lhs.mul(2**112).div(rhs);
+   }
 
 
 	function int256mul(int256 a, int256 b) internal pure returns (int256) {
